@@ -1,6 +1,16 @@
 # sea-of-stars
 
-An auto splitter for SeaOfStars.
+An auto splitter for Sea Of Stars
+
+
+## Outstanding
+
+- Sigscan for Assembly-CSharp.dll
+- [ ] Splits on Character Select
+- [ ] Load Removal
+- [ ] ~ Split on last boss final hit
+- [ ] ~ Story Flags
+
 
 ## Compilation
 
