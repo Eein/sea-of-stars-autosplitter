@@ -16,9 +16,10 @@ async fn main() {
     let mut start_watcher = Watcher::<u8>::new(); //
     let mut final_boss_watcher = Watcher::<u64>::new(); //
                                                         // let mut loading_watcher = Watcher::<u8>::new(); // CurrentGameChapterID
-                                                        // let mut near_future_scenario_progress_watcher = Watcher::<u32>::new(); // CurrentGameChapterID
+    let mut enemy_0_hp_watcher = Watcher::<u32>::new();
     let mut splits = HashSet::<String>::new();
     let settings = Settings::register();
+    let mut current_enemy = 0;
     loop {
         let process = match asr::get_os().ok().unwrap().as_str() {
             _ => Process::wait_attach("SeaOfStars.exe").await,
@@ -45,6 +46,22 @@ async fn main() {
                         None => &Pair { old: 0, current: 0 },
                     };
 
+                    let enemy_0_hp_lookup = enemy_0_hp_watcher.update(
+                        process
+                            .read_pointer_path64(
+                                main_module_base,
+                                &vec![0x327E360, 0x8E8, 0x10, 0x80, 0x40, 0x80, 0x6C],
+                            )
+                            .ok(),
+                    );
+                    let enemy_0_hp = match enemy_0_hp_lookup {
+                        Some(start_value) => start_value,
+                        None => &Pair {
+                            old: 9999,
+                            current: 9999,
+                        },
+                    };
+
                     //                     "GameAssembly.dll"+02EAAB30
                     // B8
                     // 10
@@ -65,9 +82,9 @@ async fn main() {
                             )
                             .ok(),
                     );
-                    let final_boss_name = match final_boss_name_lookup {
+                    match final_boss_name_lookup {
                         Some(final_boss_name) => {
-                            asr::print_message(&final_boss_name.to_string());
+                            current_enemy = final_boss_name.current;
                             final_boss_name
                         }
                         None => &Pair { old: 0, current: 0 },
@@ -98,8 +115,11 @@ async fn main() {
                             // CHAPTER SPLITS
 
                             if settings.chromatic_apparition
-                                && final_boss_name.old == 14918388517371959
+                                && current_enemy == 14918388517371959
+                                && enemy_0_hp.old > 0
+                                && enemy_0_hp.current < 1
                             {
+                                // asr::print_message("SPLIT FINAL BOSS");
                                 split(&mut splits, "final_split")
                             }
 
