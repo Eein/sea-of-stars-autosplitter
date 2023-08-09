@@ -10,30 +10,32 @@ on:
 
 jobs:
   build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Commit
-        uses: actions/checkout@v3
+   runs-on: ubuntu-latest
+   permissions:
+     contents: write
+   steps:
+     - name: Checkout Commit
+       uses: actions/checkout@v2
 
-      - name: Install Rust
-        uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: stable
-          targets: wasm32-unknown-unknown
+     - name: Install Rust
+       uses: hecrj/setup-rust-action@v1
+       with:
+         rust-version: 'stable' 
+         targets: 'wasm32-unknown-unknown'
+         
+     - name: Build Regular Shared Library
+       run: cargo build --target wasm32-unknown-unknown --release 
 
-      - name: Build
-        run: |
-          cargo b --locked
-
-      - name: Release
-        if: github.ref == 'refs/heads/master'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: target/wasm32-unknown-unknown/release/sea_of_stars.wasm
-          name: Latest
-          tag_name: latest
-          body: This contains the latest version of the auto splitter.
+     - name: Release
+       uses: softprops/action-gh-release@v1
+       with:
+         generate_release_notes: true
+         draft: false
+         prerelease: false
+         tag_name: release-${{ github.sha }}
+         release_name: Release ${{ github.sha }}
+         files: |
+           ./target/wasm32-unknown-unknown/release/sea_of_stars.wasm
 
   clippy:
     name: Check clippy lints
