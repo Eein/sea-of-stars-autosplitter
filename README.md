@@ -1,7 +1,6 @@
-# sea-of-stars
+# Sea Of Stars Autosplitter
 
-An auto splitter for Sea Of Stars
-
+A proof of concept auto splitter for Sea Of Stars (2023)
 
 ## Outstanding
 
@@ -11,6 +10,11 @@ An auto splitter for Sea Of Stars
 - [ ] ~ Split on last boss final hit
 - [ ] ~ Story Flags
 
+## Release
+
+The current release will always be at:
+
+https://github.com/Eein/sea-of-stars-autosplitter/releases/latest/download/sea_of_stars.wasm
 
 ## Compilation
 
