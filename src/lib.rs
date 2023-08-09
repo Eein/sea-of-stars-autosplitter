@@ -14,8 +14,8 @@ asr::async_main!(stable);
 async fn main() {
     // TODO: Set up some general state and settings.
     let mut start_watcher = Watcher::<u8>::new(); //
+    let mut loading_watcher = Watcher::<u8>::new(); //
     let mut final_boss_watcher = Watcher::<u64>::new(); //
-                                                        // let mut loading_watcher = Watcher::<u8>::new(); // CurrentGameChapterID
     let mut enemy_0_hp_watcher = Watcher::<u32>::new();
     let mut splits = HashSet::<String>::new();
     let settings = Settings::register();
@@ -62,15 +62,6 @@ async fn main() {
                         },
                     };
 
-                    //                     "GameAssembly.dll"+02EAAB30
-                    // B8
-                    // 10
-                    // 118
-                    // 10
-                    // 20
-                    // 100
-                    // 18+14 (String)
-
                     let final_boss_name_lookup: Option<&Pair<u64>> = final_boss_watcher.update(
                         process
                             .read_pointer_path64(
@@ -89,17 +80,17 @@ async fn main() {
                         }
                         None => &Pair { old: 0, current: 0 },
                     };
-                    // asr::print_message(&start.old.to_string());
-                    // let loading = loading_watcher
-                    //     .update(
-                    //         process
-                    //             .read_pointer_path64(
-                    //                 main_module_base,
-                    //                 &vec![0x5092A98, 0x8, 0x10, 0x50, 0x30, 0x3FA],
-                    //             )
-                    //             .ok(),
-                    //     )
-                    //     .unwrap();
+                    
+                    let loading = loading_watcher
+                        .update(
+                            process
+                                .read_pointer_path64(
+                                    main_module_base,
+                                    &vec![0x2EAA510, 0xB8, 0x10, 0x70],
+                                )
+                                .ok(),
+                        )
+                        .unwrap();
 
                     // Scenario Progress
 
@@ -123,19 +114,19 @@ async fn main() {
                                 split(&mut splits, "final_split")
                             }
 
-                            // if settings.load_removal {
-                            //     // load/save removal
+                            if settings.load_removal {
+                                // load/save removal
 
-                            //     if loading.old == 0 && loading.current == 1 {
-                            //         // asr::print_message("resuming game time");
-                            //         timer::resume_game_time()
-                            //     }
+                                if loading.old == 1 && loading.current == 0 {
+                                    // asr::print_message("resuming game time");
+                                    timer::resume_game_time()
+                                }
 
-                            //     if loading.old == 1 && loading.current == 0 {
-                            //         // asr::print_message("pausing game time");
-                            //         timer::pause_game_time()
-                            //     }
-                            // }
+                                if loading.old == 0 && loading.current == 1 {
+                                    // asr::print_message("pausing game time");
+                                    timer::pause_game_time()
+                                }
+                            }
                         }
                         _ => {}
                     }
