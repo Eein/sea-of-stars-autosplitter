@@ -1,6 +1,6 @@
 use asr::{
     future::next_tick,
-    timer::{self},
+    timer::{self, TimerState},
     watcher::Pair,
     watcher::Watcher,
     Process, Address,
@@ -27,6 +27,8 @@ async fn main() {
         let process = Process::wait_attach("SeaOfStars.exe").await;
         asr::print_message("Found Process");
         let module = Module::wait_attach(&process, Version::V2020).await;
+        let (main_module_base, _main_module_size) =
+            process.wait_module_range("GameAssembly.dll").await;
         asr::print_message("Found IL2CPP");
         let image = module.wait_get_default_image(&process).await;
         asr::print_message("Found Assembly-CSharp");
@@ -40,6 +42,11 @@ async fn main() {
         let parent = combat_manager_class.wait_get_parent(&process, &module).await;
         let combat_manager_instance = parent.wait_get_static_instance(&process, &module, "instance").await;
 
+        let level_manager_class = image.wait_get_class(&process, &module, "LevelManager").await;
+        let parent = level_manager_class.wait_get_parent(&process, &module).await;
+        let level_manager_instance = parent.wait_get_static_instance(&process, &module, "instance").await;
+        let loading_level_addr = level_manager_class.wait_get_field(&process, &module, "loadingLevel").await;
+
         process
             .until_closes(async {
                 // TODO: Load some initial information from the process.
@@ -51,9 +58,7 @@ async fn main() {
                         Some(start_value) => start_value,
                         None => &Pair { old: 0, current: 0 },
                     };
-                    let character_selection_screen_active = process.read_pointer_path64::<u8>(title_sequence_manager_instance + character_selection_screen, &[0x0, 0xB8]).ok().unwrap();
-                    // let character_selection_selected = process.read_pointer_path64::<u8>(instance + character_selection_screen, &[0x0, 0xDA]).ok().unwrap();
-                    
+
                     let enemy_0_hp_lookup = enemy_0_hp_watcher.update(
                         process
                             .read_pointer_path64(
@@ -73,10 +78,9 @@ async fn main() {
                     let final_boss_name_lookup: Option<&Pair<u64>> = final_boss_watcher.update(
                         process
                             .read_pointer_path64(
-                                main_module_base,
+                                combat_manager_instance,
                                 &vec![
-                                    0x2EAAB30, 0xB8, 0x10, 0xF0, 0x118, 0x10, 0x20, 0x100, 0x18,
-                                    0x14,
+                                    0xF0, 0x118, 0x10, 0x20, 0x100, 0x18, 0x14
                                 ],
                             )
                             .ok(),
@@ -84,21 +88,20 @@ async fn main() {
                     match final_boss_name_lookup {
                         Some(final_boss_name) => {
                             current_enemy = final_boss_name.current;
+                            asr::print_message("current_enemy");
                             final_boss_name
                         }
                         None => &Pair { old: 0, current: 0 },
                     };
                     
-                    let loading = loading_watcher
+                    let loading_lookup = loading_watcher
                         .update(
-                            process
-                                .read_pointer_path64(
-                                    main_module_base,
-                                    &vec![0x2EAA510, 0xB8, 0x10, 0x70],
-                                )
-                                .ok(),
-                        )
-                        .unwrap();
+                            process.read_pointer_path64::<u8>(level_manager_instance + loading_level_addr, &[0x0]).ok(),
+                        );
+                    let loading = match loading_lookup {
+                        Some(start_value) => start_value,
+                        None => &Pair { old: 0, current: 0 },
+                    };
 
                     // Scenario Progress
 
