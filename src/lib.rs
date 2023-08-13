@@ -1,10 +1,12 @@
 use asr::{
     future::next_tick,
-    timer::{self, TimerState},
+    timer::{self},
     watcher::Pair,
     watcher::Watcher,
-    Process,
+    Process, Address,
+    game_engine::unity::il2cpp::{Class, Module, Version},
 };
+use bytemuck::{Pod, Zeroable};
 mod settings;
 use settings::Settings;
 use std::collections::HashSet;
@@ -20,32 +22,38 @@ async fn main() {
     let mut splits = HashSet::<String>::new();
     let settings = Settings::register();
     let mut current_enemy = 0;
-    loop {
-        let process = match asr::get_os().ok().unwrap().as_str() {
-            _ => Process::wait_attach("SeaOfStars.exe").await,
-        };
-        let (main_module_base, _main_module_size) =
-            process.wait_module_range("GameAssembly.dll").await;
 
-        asr::print_message("Captured gameassembly");
+    loop {
+        let process = Process::wait_attach("SeaOfStars.exe").await;
+        asr::print_message("Found Process");
+        let module = Module::wait_attach(&process, Version::V2020).await;
+        asr::print_message("Found IL2CPP");
+        let image = module.wait_get_default_image(&process).await;
+        asr::print_message("Found Assembly-CSharp");
+
+        let title_sequence_manager_class = image.wait_get_class(&process, &module, "TitleSequenceManager").await;
+        let parent = title_sequence_manager_class.wait_get_parent(&process, &module).await;
+        let title_sequence_manager_instance = parent.wait_get_static_instance(&process, &module, "instance").await;
+        let character_selection_screen = title_sequence_manager_class.wait_get_field(&process, &module, "characterSelectionScreen").await;
+
+        let combat_manager_class = image.wait_get_class(&process, &module, "CombatManager").await;
+        let parent = combat_manager_class.wait_get_parent(&process, &module).await;
+        let combat_manager_instance = parent.wait_get_static_instance(&process, &module, "instance").await;
 
         process
             .until_closes(async {
                 // TODO: Load some initial information from the process.
                 loop {
                     let start_lookup = start_watcher.update(
-                        process
-                            .read_pointer_path64(
-                                main_module_base,
-                                &vec![0x2EAA630, 0xB8, 0x10, 0x70, 0x0 + 0xDA],
-                            )
-                            .ok(),
+                        process.read_pointer_path64::<u8>(title_sequence_manager_instance + character_selection_screen, &[0x0, 0xDA]).ok(),
                     );
                     let start = match start_lookup {
                         Some(start_value) => start_value,
                         None => &Pair { old: 0, current: 0 },
                     };
-
+                    let character_selection_screen_active = process.read_pointer_path64::<u8>(title_sequence_manager_instance + character_selection_screen, &[0x0, 0xB8]).ok().unwrap();
+                    // let character_selection_selected = process.read_pointer_path64::<u8>(instance + character_selection_screen, &[0x0, 0xDA]).ok().unwrap();
+                    
                     let enemy_0_hp_lookup = enemy_0_hp_watcher.update(
                         process
                             .read_pointer_path64(
@@ -130,7 +138,7 @@ async fn main() {
                         }
                         _ => {}
                     }
-                    // TODO: Do something on every tick.
+
                     next_tick().await;
                 }
             })
