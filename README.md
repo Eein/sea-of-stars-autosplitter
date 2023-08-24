@@ -1,6 +1,6 @@
 # Sea Of Stars Autosplitter
 
-A proof of concept auto splitter/load remover for Sea Of Stars (2023)
+An auto splitter/load remover for Sea Of Stars (2023)
 
 ## Outstanding
 
