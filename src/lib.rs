@@ -1,5 +1,3 @@
-// #![no_std]
-#![feature(type_alias_impl_trait, const_async_blocks, ascii_char)]
 #![warn(
     clippy::complexity,
     clippy::correctness,
@@ -12,7 +10,6 @@
 use asr::{
     future::next_tick,
     game_engine::unity::il2cpp::{Module, Version},
-    time::Duration,
     timer::{self, TimerState},
     watcher::Watcher,
     Address, Process,
@@ -20,13 +17,7 @@ use asr::{
 
 use std::collections::HashSet;
 
-// use libc_alloc::LibcAlloc;
-
-// #[global_allocator]
-// static ALLOCATOR: LibcAlloc = LibcAlloc;
-
-// asr::panic_handler!();
-asr::async_main!(nightly);
+asr::async_main!(stable);
 
 async fn main() {
     // Settings
@@ -93,54 +84,65 @@ async fn main() {
 
                 loop {
                     // Looking for offsets
-                    if title_sequence_manager_parent_instance.is_none() {
-                        title_sequence_manager_parent_instance =
-                            title_sequence_manager_parent.get_field(&process, &unity, "instance");
-                    }
+                    title_sequence_manager_parent_instance.get_or_insert_with(|| {
+                        title_sequence_manager_parent
+                            .get_field(&process, &unity, "instance")
+                            .unwrap()
+                    });
 
-                    if title_sequence_manager_character_selection_screen.is_none() {
-                        title_sequence_manager_character_selection_screen = title_sequence_manager
-                            .get_field(&process, &unity, "characterSelectionScreen");
-                    }
+                    title_sequence_manager_character_selection_screen.get_or_insert_with(|| {
+                        title_sequence_manager
+                            .get_field(&process, &unity, "characterSelectionScreen")
+                            .unwrap()
+                    });
 
-                    if title_sequence_manager_parent_static_table.is_none() {
-                        title_sequence_manager_parent_static_table =
-                            title_sequence_manager_parent.get_static_table(&process, &unity);
-                    }
+                    title_sequence_manager_parent_static_table.get_or_insert_with(|| {
+                        title_sequence_manager_parent
+                            .get_static_table(&process, &unity)
+                            .unwrap()
+                    });
 
-                    if character_selection_screen_character_selected.is_none() {
-                        character_selection_screen_character_selected = character_selection_screen
-                            .get_field(&process, &unity, "characterSelected");
-                    }
+                    character_selection_screen_character_selected.get_or_insert_with(|| {
+                        character_selection_screen
+                            .get_field(&process, &unity, "characterSelected")
+                            .unwrap()
+                    });
 
-                    if combat_manager_class_parent_instance.is_none() {
-                        combat_manager_class_parent_instance =
-                            combat_manager_class_parent.get_field(&process, &unity, "instance");
-                    }
+                    combat_manager_class_parent_instance.get_or_insert_with(|| {
+                        combat_manager_class_parent
+                            .get_field(&process, &unity, "instance")
+                            .unwrap()
+                    });
 
-                    if combat_manager_class_parent_static_table.is_none() {
-                        combat_manager_class_parent_static_table =
-                            combat_manager_class_parent.get_static_table(&process, &unity);
-                    }
-                    if combat_manager_class_current_encounter.is_none() {
-                        combat_manager_class_current_encounter =
-                            combat_manager_class.get_field(&process, &unity, "currentEncounter");
-                    }
+                    combat_manager_class_parent_static_table.get_or_insert_with(|| {
+                        combat_manager_class_parent
+                            .get_static_table(&process, &unity)
+                            .unwrap()
+                    });
 
-                    if level_manager_class_parent_instance.is_none() {
-                        level_manager_class_parent_instance =
-                            level_manager_class_parent.get_field(&process, &unity, "instance");
-                    }
+                    combat_manager_class_current_encounter.get_or_insert_with(|| {
+                        combat_manager_class
+                            .get_field(&process, &unity, "currentEncounter")
+                            .unwrap()
+                    });
 
-                    if level_manager_class_loading.is_none() {
-                        level_manager_class_loading =
-                            level_manager_class.get_field(&process, &unity, "loadingLevel");
-                    }
+                    level_manager_class_parent_instance.get_or_insert_with(|| {
+                        level_manager_class_parent
+                            .get_field(&process, &unity, "instance")
+                            .unwrap()
+                    });
 
-                    if level_manager_class_parent_static_table.is_none() {
-                        level_manager_class_parent_static_table =
-                            level_manager_class_parent.get_static_table(&process, &unity);
-                    }
+                    level_manager_class_loading.get_or_insert_with(|| {
+                        level_manager_class
+                            .get_field(&process, &unity, "loadingLevel")
+                            .unwrap()
+                    });
+
+                    level_manager_class_parent_static_table.get_or_insert_with(|| {
+                        level_manager_class_parent
+                            .get_static_table(&process, &unity)
+                            .unwrap()
+                    });
 
                     // Your update logic
                     let start_autosplitter = if title_sequence_manager_parent_instance.is_some()
@@ -229,7 +231,7 @@ async fn main() {
                         && combat_manager_class_current_encounter.is_some()
                         && combat_manager_class_parent_static_table.is_some()
                     {
-                        let hp = process
+                        process
                             .read_pointer_path64::<u32>(
                                 combat_manager_class_parent_static_table.unwrap_or_default(),
                                 &[
@@ -245,33 +247,26 @@ async fn main() {
                                     0x6C,
                                 ],
                             )
-                            .unwrap_or_default();
-                        hp
+                            .unwrap_or_default()
                     } else {
-                        99999
+                        9999999
                     };
 
                     watchers.enemy_0_hp.update_infallible(enemy_0_hp);
                     // The update logic ends here
 
                     // Splitting logic
-                    let timer_state = timer::state();
-                    if timer_state == TimerState::Running || timer_state == TimerState::Paused {
-                        if let Some(is_loading) = is_loading(&watchers, &settings) {
-                            if is_loading {
-                                timer::pause_game_time()
-                            } else {
-                                timer::resume_game_time()
+
+                    match timer::state() {
+                        TimerState::Running | TimerState::Paused => {
+                            if let Some(is_loading) = is_loading(&watchers, &settings) {
+                                if is_loading {
+                                    timer::pause_game_time()
+                                } else {
+                                    timer::resume_game_time()
+                                }
                             }
-                        }
 
-                        if let Some(game_time) = game_time(&watchers, &settings) {
-                            timer::set_game_time(game_time)
-                        }
-
-                        if reset(&watchers, &settings) {
-                            timer::reset()
-                        } else {
                             if settings.chromatic_apparition
                                 && current_enemy == 27866233151488101
                                 && watchers.enemy_0_hp.pair.unwrap().current == 0
@@ -279,21 +274,23 @@ async fn main() {
                                 split(&mut splits, "final_split")
                             }
                         }
-                    }
-
-                    if timer::state() == TimerState::NotRunning && start(&watchers, &settings) {
-                        splits = HashSet::<String>::new();
-                        timer::start();
-                        timer::pause_game_time();
-
-                        if let Some(is_loading) = is_loading(&watchers, &settings) {
-                            if is_loading {
-                                timer::pause_game_time()
-                            } else {
-                                timer::resume_game_time()
+                        TimerState::NotRunning => {
+                            if start(&watchers, &settings) {
+                                current_enemy = 0;
+                                splits = HashSet::<String>::new();
+                                timer::start();
+                                timer::pause_game_time();
+                                if let Some(is_loading) = is_loading(&watchers, &settings) {
+                                    if is_loading {
+                                        timer::pause_game_time()
+                                    } else {
+                                        timer::resume_game_time()
+                                    }
+                                }
                             }
                         }
-                    }
+                        _ => {}
+                    };
 
                     next_tick().await;
                 }
@@ -308,14 +305,6 @@ fn is_loading(watchers: &Watchers, settings: &Settings) -> Option<bool> {
     } else {
         Some(watchers.loading.pair?.current)
     }
-}
-
-fn game_time(_watchers: &Watchers, _settings: &Settings) -> Option<Duration> {
-    None
-}
-
-fn reset(_watchers: &Watchers, _settings: &Settings) -> bool {
-    false
 }
 
 fn start(watchers: &Watchers, settings: &Settings) -> bool {
