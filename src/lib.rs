@@ -84,65 +84,55 @@ async fn main() {
 
                 loop {
                     // Looking for offsets
-                    title_sequence_manager_parent_instance.get_or_insert_with(|| {
-                        title_sequence_manager_parent
-                            .get_field(&process, &unity, "instance")
-                            .unwrap()
-                    });
+                    if title_sequence_manager_parent_instance.is_none() {
+                        title_sequence_manager_parent_instance =
+                            title_sequence_manager_parent.get_field(&process, &unity, "instance");
+                    }
 
-                    title_sequence_manager_character_selection_screen.get_or_insert_with(|| {
-                        title_sequence_manager
-                            .get_field(&process, &unity, "characterSelectionScreen")
-                            .unwrap()
-                    });
+                    if title_sequence_manager_character_selection_screen.is_none() {
+                        title_sequence_manager_character_selection_screen = title_sequence_manager
+                            .get_field(&process, &unity, "characterSelectionScreen");
+                    }
 
-                    title_sequence_manager_parent_static_table.get_or_insert_with(|| {
-                        title_sequence_manager_parent
-                            .get_static_table(&process, &unity)
-                            .unwrap()
-                    });
+                    if title_sequence_manager_parent_static_table.is_none() {
+                        title_sequence_manager_parent_static_table =
+                            title_sequence_manager_parent.get_static_table(&process, &unity);
+                    }
 
-                    character_selection_screen_character_selected.get_or_insert_with(|| {
-                        character_selection_screen
-                            .get_field(&process, &unity, "characterSelected")
-                            .unwrap()
-                    });
+                    if character_selection_screen_character_selected.is_none() {
+                        character_selection_screen_character_selected = character_selection_screen
+                            .get_field(&process, &unity, "characterSelected");
+                    }
 
-                    combat_manager_class_parent_instance.get_or_insert_with(|| {
-                        combat_manager_class_parent
-                            .get_field(&process, &unity, "instance")
-                            .unwrap()
-                    });
+                    if combat_manager_class_parent_instance.is_none() {
+                        combat_manager_class_parent_instance =
+                            combat_manager_class_parent.get_field(&process, &unity, "instance");
+                    }
 
-                    combat_manager_class_parent_static_table.get_or_insert_with(|| {
-                        combat_manager_class_parent
-                            .get_static_table(&process, &unity)
-                            .unwrap()
-                    });
-
-                    combat_manager_class_current_encounter.get_or_insert_with(|| {
-                        combat_manager_class
+                    if combat_manager_class_parent_static_table.is_none() {
+                        combat_manager_class_parent_static_table =
+                            combat_manager_class_parent.get_static_table(&process, &unity);
+                    }
+                    if combat_manager_class_current_encounter.is_none() {
+                        combat_manager_class_current_encounter = combat_manager_class
                             .get_field(&process, &unity, "currentEncounter")
-                            .unwrap()
-                    });
+                    };
 
-                    level_manager_class_parent_instance.get_or_insert_with(|| {
-                        level_manager_class_parent
-                            .get_field(&process, &unity, "instance")
-                            .unwrap()
-                    });
 
-                    level_manager_class_loading.get_or_insert_with(|| {
-                        level_manager_class
-                            .get_field(&process, &unity, "loadingLevel")
-                            .unwrap()
-                    });
+                    if level_manager_class_parent_instance.is_none() {
+                        level_manager_class_parent_instance =
+                            level_manager_class_parent.get_field(&process, &unity, "instance");
+                    }
 
-                    level_manager_class_parent_static_table.get_or_insert_with(|| {
-                        level_manager_class_parent
-                            .get_static_table(&process, &unity)
-                            .unwrap()
-                    });
+                    if level_manager_class_loading.is_none() {
+                        level_manager_class_loading =
+                            level_manager_class.get_field(&process, &unity, "loadingLevel");
+                    }
+
+                    if level_manager_class_parent_static_table.is_none() {
+                        level_manager_class_parent_static_table =
+                            level_manager_class_parent.get_static_table(&process, &unity);
+                    }
 
                     // Your update logic
                     let start_autosplitter = if title_sequence_manager_parent_instance.is_some()
