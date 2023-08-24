@@ -4,9 +4,9 @@ A proof of concept auto splitter/load remover for Sea Of Stars (2023)
 
 ## Outstanding
 
-- [ ] Sigscan for Assembly-CSharp.dll
+- [x] Sigscan for Assembly-CSharp.dll
 - [x] Splits on Character Select
-- [ ] Load Removal
+- [x] Load Removal
 - [x] ~ Split on last boss final hit
 - [ ] ~ Story Flags
 
