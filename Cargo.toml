@@ -15,11 +15,12 @@ asr = { git = "https://github.com/LiveSplit/asr", features = [
     "integer-vars", # Setting integer variables.
     # "signature", # Scanning signatures.
     # "wasi-no-std", # Support for no_std on WASI.
-    # "unity", # Accessing games using the Unity engine.
+    "unity", # Accessing games using the Unity engine.
     # "gba", # Accessing Game Boy Advance emulators.
     # "genesis", # Accessing Genesis emulators.
     # "ps1", # Accessing PlayStation emulators.
 ] }
+libc_alloc = "1.0.5"
 
 # Bytemuck can be used to define structs that are being read from the game's process.
 bytemuck = { version = "1", features = ["derive", "min_const_generics"] }

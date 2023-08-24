@@ -16,7 +16,12 @@ dependencies = [
  "arrayvec",
  "asr-derive",
  "bytemuck",
+<<<<<<< HEAD
  "itoa",
+=======
+ "libm",
+ "memchr",
+>>>>>>> 1d25142 (add splits)
  "time",
  "wasi",
 ]
@@ -64,8 +69,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
+<<<<<<< HEAD
 name = "itoa"
 version = "1.0.9"
+=======
+name = "libc_alloc"
+version = "1.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "004feaae88f49fe8cfeffb4565dae94ac608313e454ebab4a4d0d0202b553fb3"
+
+[[package]]
+name = "libm"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7012b1bbb0719e1097c47611d3898568c546d597c2e74d66f6087edd5233ff4"
+
+[[package]]
+name = "memchr"
+version = "2.5.0"
+>>>>>>> 1d25142 (add splits)
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af150ab688ff2122fcef229be89cb50dd66af9e01a4ff320cc137eecc9bacc38"
 
@@ -93,6 +115,7 @@ version = "0.1.0"
 dependencies = [
  "asr",
  "bytemuck",
+ "libc_alloc",
 ]
 
 [[package]]

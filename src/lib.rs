@@ -1,3 +1,5 @@
+// #![no_std]
+#![feature(type_alias_impl_trait, const_async_blocks, ascii_char)]
 #![warn(
     clippy::complexity,
     clippy::correctness,
@@ -16,7 +18,15 @@ use asr::{
     Address, Process,
 };
 
-asr::async_main!(stable);
+use std::collections::HashSet;
+
+// use libc_alloc::LibcAlloc;
+
+// #[global_allocator]
+// static ALLOCATOR: LibcAlloc = LibcAlloc;
+
+// asr::panic_handler!();
+asr::async_main!(nightly);
 
 async fn main() {
     // Settings
@@ -30,7 +40,7 @@ async fn main() {
             .until_closes(async {
                 // Once the target process has been found and attached to, set up the watchers in their default state
                 let mut watchers = Watchers::default();
-
+                let mut splits = HashSet::<String>::new();
                 // Perform our memory scraping here
                 let unity = Module::wait_attach(&process, Version::V2020).await;
                 asr::print_limited::<128>(&"=> Found Unity module");
@@ -65,6 +75,7 @@ async fn main() {
                 asr::print_limited::<128>(&"   => Found parent");
                 let mut combat_manager_class_parent_instance: Option<u32> = None;
                 let mut combat_manager_class_parent_static_table: Option<Address> = None;
+                let mut combat_manager_class_current_encounter: Option<u32> = None;
 
                 let level_manager_class = assembly
                     .wait_get_class(&process, &unity, "LevelManager")
@@ -76,6 +87,7 @@ async fn main() {
                 let mut level_manager_class_parent_instance: Option<u32> = None;
                 let mut level_manager_class_loading: Option<u32> = None;
                 let mut level_manager_class_parent_static_table: Option<Address> = None;
+                let mut current_enemy = 0;
 
                 asr::print_limited::<128>(&"=> Autosplitter ready");
 
@@ -109,6 +121,10 @@ async fn main() {
                     if combat_manager_class_parent_static_table.is_none() {
                         combat_manager_class_parent_static_table =
                             combat_manager_class_parent.get_static_table(&process, &unity);
+                    }
+                    if combat_manager_class_current_encounter.is_none() {
+                        combat_manager_class_current_encounter =
+                            combat_manager_class.get_field(&process, &unity, "currentEncounter");
                     }
 
                     if level_manager_class_parent_instance.is_none() {
@@ -177,26 +193,65 @@ async fn main() {
                     };
                     watchers.loading.update_infallible(loading);
 
-                    let chromatic_apparition = if level_manager_class_parent_instance.is_some()
-                        && level_manager_class_loading.is_some()
-                        && level_manager_class_parent_static_table.is_some()
+                    if combat_manager_class_parent_instance.is_some()
+                        && combat_manager_class_current_encounter.is_some()
+                        && combat_manager_class_parent_static_table.is_some()
                     {
-                        process
-                            .read_pointer_path64::<u8>(
+                        let enemy = process
+                            .read_pointer_path64::<u64>(
                                 combat_manager_class_parent_static_table.unwrap_or_default(),
                                 &[
-                                    level_manager_class_parent_instance
+                                    combat_manager_class_parent_instance
                                         .unwrap_or_default()
                                         .into(),
-                                    level_manager_class_loading.unwrap_or_default().into(),
+                                    combat_manager_class_current_encounter
+                                        .unwrap_or_default()
+                                        .into(),
+                                    0x130,
+                                    0x10,
+                                    0x20,
+                                    0x58,
+                                    0xF0,
+                                    0xD8,
+                                    0x18,
+                                    0x14,
                                 ],
                             )
-                            .unwrap_or_default()
-                            > 0
-                    } else {
-                        true
+                            .unwrap_or_default();
+                        if enemy != 0 {
+                            current_enemy = enemy
+                        }
+
+                        // In the future read the utf8 string here - requires nightly for .as_str()
                     };
-                    watchers.loading.update_infallible(loading);
+
+                    let enemy_0_hp = if combat_manager_class_parent_instance.is_some()
+                        && combat_manager_class_current_encounter.is_some()
+                        && combat_manager_class_parent_static_table.is_some()
+                    {
+                        let hp = process
+                            .read_pointer_path64::<u32>(
+                                combat_manager_class_parent_static_table.unwrap_or_default(),
+                                &[
+                                    combat_manager_class_parent_instance
+                                        .unwrap_or_default()
+                                        .into(),
+                                    combat_manager_class_current_encounter
+                                        .unwrap_or_default()
+                                        .into(),
+                                    0x130,
+                                    0x10,
+                                    0x20,
+                                    0x6C,
+                                ],
+                            )
+                            .unwrap_or_default();
+                        hp
+                    } else {
+                        99999
+                    };
+
+                    watchers.enemy_0_hp.update_infallible(enemy_0_hp);
                     // The update logic ends here
 
                     // Splitting logic
@@ -216,12 +271,18 @@ async fn main() {
 
                         if reset(&watchers, &settings) {
                             timer::reset()
-                        } else if split(&watchers, &settings) {
-                            timer::split()
+                        } else {
+                            if settings.chromatic_apparition
+                                && current_enemy == 27866233151488101
+                                && watchers.enemy_0_hp.pair.unwrap().current == 0
+                            {
+                                split(&mut splits, "final_split")
+                            }
                         }
                     }
 
                     if timer::state() == TimerState::NotRunning && start(&watchers, &settings) {
+                        splits = HashSet::<String>::new();
                         timer::start();
                         timer::pause_game_time();
 
@@ -249,11 +310,11 @@ fn is_loading(watchers: &Watchers, settings: &Settings) -> Option<bool> {
     }
 }
 
-fn game_time(watchers: &Watchers, settings: &Settings) -> Option<Duration> {
+fn game_time(_watchers: &Watchers, _settings: &Settings) -> Option<Duration> {
     None
 }
 
-fn reset(watchers: &Watchers, settings: &Settings) -> bool {
+fn reset(_watchers: &Watchers, _settings: &Settings) -> bool {
     false
 }
 
@@ -261,14 +322,20 @@ fn start(watchers: &Watchers, settings: &Settings) -> bool {
     if !settings.start_autosplitter {
         return false;
     }
-    let Some(start_autosplitter) = &watchers.start_autosplitter.pair else { return false };
+    let Some(start_autosplitter) = &watchers.start_autosplitter.pair else {
+        return false;
+    };
     !start_autosplitter.old && start_autosplitter.current
 }
 
-fn split(_watchers: &Watchers, _settings: &Settings) -> bool {
-    false
+fn split(splits: &mut HashSet<String>, key: &str) {
+    if !splits.contains(key) {
+        splits.insert(key.to_string());
+        let split_message = format!("splitting: {}", &key.to_string());
+        asr::print_message(&split_message);
+        timer::split()
+    }
 }
-
 #[derive(asr::user_settings::Settings)]
 struct Settings {
     #[default = true]
@@ -286,6 +353,5 @@ struct Settings {
 struct Watchers {
     start_autosplitter: Watcher<bool>,
     loading: Watcher<bool>,
-    chromatic_apparition: Watcher<u64>,
     enemy_0_hp: Watcher<u32>,
 }
