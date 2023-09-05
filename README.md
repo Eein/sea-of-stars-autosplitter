@@ -1,4 +1,6 @@
-# Sea Of Stars Autosplitter
+# ARCHIVED: Sea Of Stars Autosplitter
+
+This autosplitter is no longer maintained, see: https://github.com/knutwalker/sea-of-stars-autosplitter
 
 An auto splitter/load remover for Sea Of Stars (2023)
 
